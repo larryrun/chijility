@@ -4,8 +4,10 @@ import * as express from "express";
 import * as logger from "morgan";
 import * as path from "path";
 import * as errorHandler from "errorhandler";
+import * as http from 'http';
 
 import { IndexRoute } from "./routes/index";
+
 
 /**
  * The server.
@@ -14,18 +16,23 @@ import { IndexRoute } from "./routes/index";
  */
 export class Server {
 
+  private httpPort: number;
   public app: express.Application;
 
-  /**
-   * Bootstrap the application.
-   *
-   * @class Server
-   * @method bootstrap
-   * @static
-   * @return {ng.auto.IInjectorService} Returns the newly created injector for this app.
-   */
-  public static bootstrap(): Server {
+  public static initServer(): Server {
     return new Server();
+  }
+
+  public startUp() {
+    var httpServer = http.createServer(this.app);
+    httpServer.listen(this.httpPort, ()=>{
+      console.log('Listening started on ' + this.httpPort)
+    });
+    httpServer.on("error", this.onError);
+    const io = require('socket.io')(httpServer)
+    io.on('connection', (socket:any)=> {
+      console.log('a user connected:' + socket.id);
+    });
   }
 
   /**
@@ -65,6 +72,8 @@ export class Server {
    * @method config
    */
   public config() {
+    this.httpPort = this.normalizePort(process.env.PORT || 8080);
+
     //add static paths
     this.app.use(express.static(path.join(__dirname, "public")));
 
@@ -114,4 +123,43 @@ export class Server {
     this.app.use(router);
   }
 
+  private normalizePort(val: any) {
+    var port = parseInt(val, 10);
+
+    if (isNaN(port)) {
+      // named pipe
+      return val;
+    }
+
+    if (port >= 0) {
+      // port number
+      return port;
+    }
+
+    return false;
+  }
+
+  private onError(error: any) {
+    if (error.syscall !== "listen") {
+      throw error;
+    }
+
+    var bind = typeof this.httpPort === "string"
+      ? "Pipe " + this.httpPort
+      : "Port " + this.httpPort;
+
+    // handle specific listen errors with friendly messages
+    switch (error.code) {
+      case "EACCES":
+        console.error(bind + " requires elevated privileges");
+        process.exit(1);
+        break;
+      case "EADDRINUSE":
+        console.error(bind + " is already in use");
+        process.exit(1);
+        break;
+      default:
+        throw error;
+    }
+  }
 }

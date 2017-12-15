@@ -1,6 +1,7 @@
 import 'p2';
 import 'pixi';
 import 'phaser';
+import * as io from 'socket.io-client';
 
 class SimpleGame {
 
@@ -19,4 +20,13 @@ class SimpleGame {
 
 window.onload = () => {
     var game = new SimpleGame();
-};
+    console.log('before init');
+    const socket = io();
+    console.log('init');
+    console.log(socket);
+    socket.on('connect', onConnect);
+    function onConnect(){
+      console.log('connect ' + socket.id);
+    }
+    socket.emit('playerMove');
+}
